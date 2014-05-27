@@ -1,0 +1,107 @@
+#!/bin/bash
+## Some rudimentary utils I cooked up to introspect & hack docker containers
+## Copyright 2014: Tavis Rudd
+## License: MIT
+
+die() {
+    echo "$@" >/dev/stderr
+    exit 1
+}
+
+supported_cgroups() {
+    lscgroup | awk -F: "/$(get_id "$1")/ {print \$1}" | paste -sd,
+}
+
+get_prop() {
+    docker inspect --format "{{$2}}" "$1"
+}
+
+get_last_id() { 
+    docker ps -l -q --no-trunc
+}
+
+get_id() {
+    case "$1" in
+        l)
+            get_last_id
+            ;;
+        *)
+            get_prop "$1" ".ID" || die "invalid container id: $1"
+            ;;
+    esac
+}
+
+get_ip(){
+    get_prop "$(get_id "$1")" ".NetworkSettings.IPAddress"
+}
+
+get_root_pid(){
+    get_prop "$(get_id "$1")" ".State.Pid"
+}
+
+pids() {
+    local ID="$(get_id "$1")"
+    paste -sd "," < /sys/fs/cgroup/devices/docker/"$ID"/tasks
+}
+
+fsroot() {
+    local ID="$(get_id "$1")"
+    local graph_root=$(get_prop "$ID" ".HostsPath" | sed 's/containers.*$//')
+    local driver=$(get_prop "$ID" ".Driver")
+    case "$driver" in
+        aufs)
+            echo "$graph_root"aufs/mnt/"$ID"
+            ;;
+        btrfs)
+            echo "$graph_root"btrfs/subvolumes/"$ID"
+            ;;
+        devicemapper)
+            echo "$graph_root"devicemapper/mnt/"$ID"/rootfs/
+            ;;
+        *)
+            die "I don't know how to handle this type of driver: $driver"
+    esac
+}
+
+dhtop() {
+    htop -p "$(pids "$1")"
+}
+
+dssh() {
+    local IP="$(get_ip "$1")"
+    shift 
+    ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "$IP" "$@"
+}
+
+cg_exec() {
+    local ID="$(get_id "$1")"
+    shift
+    cgexec -g "$(supported_cgroups $ID):docker/$ID" -- "$@"
+}
+
+ns_enter() {
+    local PID="$(get_root_pid "$1")"
+    shift
+    nsenter --target "$PID" --mount --uts --ipc --net --pid -- "$@"
+}
+
+inside() {
+    local ID="$(get_id "$1")"
+    local PID="$(get_root_pid "$1")"
+    shift
+    cgexec -g "$(supported_cgroups $ID):docker/$ID" -- \
+        nsenter --target "$PID" --mount --uts --ipc --net --pid -- "$@"
+}
+
+_getcaps() {
+    local PID="$1"
+    ruby -e "require 'pp'; require 'cap2'; pp Cap2.process($PID).getcaps[:effective]"
+}
+getcaps() {
+    _getcaps $(get_root_pid "$1")
+}
+
+main() {
+    "$@"
+}
+main "$@"
