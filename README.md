@@ -3,6 +3,14 @@ dockhack
 
 Some rudimentary utils I cooked up to introspect &amp; hack docker containers from the host
 
+Installation
+============
+```
+sudo wget -O /usr/local/sbin/dockhack https://raw.githubusercontent.com/tavisrudd/dockhack/master/dockhack
+sudo chmod +x /usr/local/sbin/dockhack
+sudo dockhack install_deps
+```
+
 Usage
 =====
 Note, most of these commands require `root` privileges to work.
