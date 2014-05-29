@@ -6,10 +6,13 @@ Some rudimentary utils I cooked up to introspect &amp; hack docker containers fr
 Usage
 =====
 ```
-  dockhack last_id | last
+
+  dockhack last
+  dockhack last_id
     prints the full id of the last container to run
     short-hand for `docker ps -l -q --no-trunc`
 
+  dockhack id CID
   dockhack get_id CID
     resolve and print the full SHA version of a container ID
 
@@ -18,6 +21,12 @@ Usage
 
   dockhack get_ip CID
     print the container's IPv4 address
+
+  dockhack net CID
+    print lots of info about the network configuration of the container
+
+  dockhack netfilter CID
+    print all netfilter/iptables rules related to the container
 
   dockhack get_root_pid CID
     print the container's top-level PID

@@ -26,6 +26,10 @@ get_id() {
     esac
 }
 
+id() {
+    get_id "$1"
+}
+
 get_prop() {
     docker inspect --format "{{$2}}" "$1"
 }
@@ -104,16 +108,80 @@ get_caps() {
     _get_caps "$(get_root_pid "$1")"
 }
 
+
+netfilter() {
+    local IP="$(get_ip "$1")"
+    { 
+        iptables -L -nv
+        iptables -L -nv -t nat
+    } | grep "$IP"
+}
+
+guest_veth_ifindex() {
+    inside "$1" ethtool -S eth0 | awk '/ifindex/ {print $2}'
+}
+
+host_veth() {
+    local ifindex="$(guest_veth_ifindex "$1")"
+    ip link | awk -F": " "/^$ifindex/ {print \$2}"
+# or if I wanted to contort myself:
+#     python2 <<EOF 
+# import ctypes
+# libc = ctypes.CDLL("libc.so.6")
+# res = ctypes.create_string_buffer(20)
+# libc.if_indextoname(ctypes.c_int($ifindex), res)
+# print res.value
+# EOF
+}
+_indent () {
+    sed "s/^/    /"
+}
+_netinfo() {
+    local ID="$(get_id "$1")"
+    local IP="$(get_ip "$1")"
+    local HOST_VETH="$(host_veth "$ID")"
+    echo "ID $ID"
+    echo "IP $IP"
+    echo "HOST_VETH $HOST_VETH"
+    ip link show "$HOST_VETH" | _indent
+    echo "NETFILTER_DETAILS:"
+    netfilter "$ID" | _indent
+    echo "inside ip addr:"
+    inside "$ID" ip addr | _indent
+    echo "inside ip route:"
+    inside "$ID" ip route | _indent
+    echo "inside arp:"
+    inside "$ID" arp | _indent
+    echo "inside /etc/hosts:"
+    inside "$ID" cat /etc/hosts | _indent
+    echo "inside /etc/resolv.conf:"
+    inside "$ID" cat /etc/resolv.conf | _indent
+}
+net () {
+    if [[ -t 1 ]]; then 
+        _netinfo "$1" | less
+    else
+        _netinfo "$1" 
+    fi
+}
+
+pstree() {
+    local PID="$(get_root_pid "$1")"
+    command pstree -usl -H"$PID" "$PID"
+}
+
 usage() {
     cat <<"EOF"
 dockhack: some utilities to inspect and hack into docker containers
 
 Usage: 
 
-  dockhack last_id | last
+  dockhack last
+  dockhack last_id
     prints the full id of the last container to run
     short-hand for `docker ps -l -q --no-trunc`
 
+  dockhack id CID
   dockhack get_id CID
     resolve and print the full SHA version of a container ID
 
@@ -122,6 +190,12 @@ Usage:
 
   dockhack get_ip CID
     print the container's IPv4 address
+
+  dockhack net CID
+    print lots of info about the network configuration of the container
+
+  dockhack netfilter CID
+    print all netfilter/iptables rules related to the container
 
   dockhack get_root_pid CID
     print the container's top-level PID
