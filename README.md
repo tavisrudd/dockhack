@@ -34,11 +34,26 @@ Usage
   dockhack pids CID
     print a comma delimited list of all PIDs in the container
 
-  dockhack fsroot CID
-    print the mount path of the container's filesystem inside /var/lib/docker
+  dockhack ps_host CID
+    ps -H -f -p $(pids "$CID")
+
+  dockhack ps_guest CID
+    run `ps -efH` inside the container
+
+  dockhack psx CID
+    run both ps_host and ps_guest
+
+  dockhack pgrep CID <pgrep args>
+    run pgrep inside the container
+
+  dockhack pstree CID
+    run `pstree` scoped to the container processes
 
   dockhack dhtop CID
     run htop, on the host, with the PIDs limited to those in the container
+
+  dockhack fsroot CID
+    print the mount path of the container's filesystem inside /var/lib/docker
 
   dockhack dssh CID
     ssh into the container, assuming you've got init+sshd running

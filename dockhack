@@ -100,12 +100,15 @@ inside() {
         nsenter --target "$PID" --mount --uts --ipc --net --pid -- "$@"
 }
 
-_get_caps() {
-    local PID="$1"
-    ruby -e "require 'pp'; require 'cap2'; pp Cap2.process($PID).getcaps[:effective]"
-}
 get_caps() {
-    _get_caps "$(get_root_pid "$1")"
+    local PID=$(get_root_pid "$1")
+    ruby -e "require 'pp'; require 'cap2'; pp Cap2.process($PID).getcaps[:effective]" | egrep --color=auto 'admin|$'
+}
+
+pgrep() {
+    local ID="$(get_id "$1")"
+    shift
+    inside "$ID" pgrep "$@"
 }
 
 
@@ -170,9 +173,24 @@ pstree() {
     command pstree -usl -H"$PID" "$PID"
 }
 
+ps_guest() {
+    inside "$1" ps -efH
+}
+
+ps_host() {
+    ps -H -f -p $(pids "$1")
+}
+
+psx() {
+    echo '# PIDs inside container'
+    ps_guest "$1"
+    echo '# PIDs outside in host'
+    ps_host "$1"
+}
+
 usage() {
     cat <<"EOF"
-dockhack: some utilities to inspect and hack into docker containers
+dockhack: some utilities to inspect and hack into Docker containers
 
 Usage: 
 
@@ -203,11 +221,26 @@ Usage:
   dockhack pids CID
     print a comma delimited list of all PIDs in the container
 
-  dockhack fsroot CID
-    print the mount path of the container's filesystem inside /var/lib/docker
+  dockhack ps_host CID
+    ps -H -f -p $(pids "$CID")
+
+  dockhack ps_guest CID
+    run `ps -efH` inside the container
+
+  dockhack psx CID
+    run both ps_host and ps_guest
+
+  dockhack pgrep CID <pgrep args>
+    run pgrep inside the container
+
+  dockhack pstree CID
+    run `pstree` scoped to the container processes
 
   dockhack dhtop CID
     run htop, on the host, with the PIDs limited to those in the container
+
+  dockhack fsroot CID
+    print the mount path of the container's filesystem inside /var/lib/docker
 
   dockhack dssh CID
     ssh into the container, assuming you've got init+sshd running
