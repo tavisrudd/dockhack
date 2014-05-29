@@ -5,6 +5,7 @@ Some rudimentary utils I cooked up to introspect &amp; hack docker containers fr
 
 Usage
 =====
+Note, most of these commands require `root` privileges to work.
 ```
 
   dockhack last
