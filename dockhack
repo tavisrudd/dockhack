@@ -174,6 +174,31 @@ net () {
     fi
 }
 
+mem() {
+    local ID="$(get_id "$1")"
+    cat "/sys/fs/cgroup/memory/docker/$ID/memory.stat"
+
+    echo -n "usage_in_bytes "
+    cat "/sys/fs/cgroup/memory/docker/$ID/memory.max_usage_in_bytes"
+
+    echo -n "max_usage_in_bytes "
+    cat "/sys/fs/cgroup/memory/docker/$ID/memory.max_usage_in_bytes"
+
+    echo -n "limit_in_bytes "
+    cat "/sys/fs/cgroup/memory/docker/$ID/memory.limit_in_bytes"
+
+    echo -n "failcnt "
+    cat "/sys/fs/cgroup/memory/docker/$ID/memory.failcnt"
+
+    echo -n "swappiness "
+    cat "/sys/fs/cgroup/memory/docker/$ID/memory.swappiness"
+
+    cat "/sys/fs/cgroup/memory/docker/$ID/memory.oom_control"
+}
+memory() {
+    mem "$@"
+}
+
 pstree() {
     local PID="$(get_root_pid "$1")"
     command pstree -usl -H"$PID" "$PID"
@@ -194,11 +219,54 @@ psx() {
     ps_outside "$1"
 }
 
+_install_nsenter(){
+    echo ">> Downloading & installing nsenter from the util-linux package."
+    mkdir -p /usr/local/sbin/
+    wget -O /usr/local/sbin/nsenter https://s3.amazonaws.com/dss.public-downloads/nsenter
+    chmod +x /usr/local/sbin/nsenter
+}
+
+_get_distro() {
+    if grep Ubuntu /etc/os-release >/dev/null; then
+        echo ubuntu
+    elif [[ -e /etc/debian_version ]]; then
+        echo debian
+    elif [[ -e /etc/gentoo-release ]]; then
+        echo gentoo
+    fi
+}
+
+_install_cgroup_bin() {
+    case _get_distro in 
+        gentoo)
+            emerge -u libcgroup
+            ;;
+        ubuntu|debian)
+            apt-get install cgroup-bin 
+            ;;
+        *)
+            echo ">> You need to install the libcgroup (aka cgroup-bin) package." >/dev/stderr
+            return 1
+            ;;
+    esac
+}
+install_deps() {    
+    { 
+        which lscgroup &>/dev/null || _install_cgroup_bin
+    } && {
+        which nsenter &> /dev/null || _install_nsenter
+    } || 
+    echo "dockhack requires recent versions of the cgroup-bin (aka libcgroup) and util-linux packages."
+}
+
 usage() {
     cat <<"EOF"
 dockhack: some utilities to inspect and hack into Docker containers
 
 Usage: 
+  dockhack install_deps
+    attempts to install dockhack's deps: the `cgroup-bin` package and
+    `nsenter` from `util-linux`
 
   dockhack last
   dockhack last_id
@@ -214,6 +282,10 @@ Usage:
 
   dockhack get_ip CID
     print the container's IPv4 address
+
+  dockhack mem CID
+  dockhack memory CID
+    print the container's memory stats and limits
 
   dockhack net CID
     print lots of info about the network configuration of the container

@@ -7,6 +7,9 @@ Usage
 =====
 Note, most of these commands require `root` privileges to work.
 ```
+  dockhack install_deps
+    attempts to install dockhack's deps: the `cgroup-bin` package and
+    `nsenter` from `util-linux`
 
   dockhack last
   dockhack last_id
@@ -22,6 +25,10 @@ Note, most of these commands require `root` privileges to work.
 
   dockhack get_ip CID
     print the container's IPv4 address
+
+  dockhack mem CID
+  dockhack memory CID
+    print the container's memory stats and limits
 
   dockhack net CID
     print lots of info about the network configuration of the container
