@@ -3,6 +3,7 @@
 ## Copyright 2014: Tavis Rudd <tavis@damnsimple.com>
 ## License: MIT
 
+
 die() {
     echo "$@" >/dev/stderr
     exit 1
@@ -44,7 +45,7 @@ get_root_pid(){
 
 pids() {
     local ID="$(get_id "$1")"
-    paste -sd "," < /sys/fs/cgroup/devices/docker/"$ID"/tasks
+    paste -sd "," < "/sys/fs/cgroup/devices/docker/$ID/tasks"
 }
 
 fsroot() {
@@ -53,27 +54,27 @@ fsroot() {
     local driver=$(get_prop "$ID" ".Driver")
     case "$driver" in
         aufs)
-            echo "$graph_root"aufs/mnt/"$ID"
+            echo "${graph_root}aufs/mnt/$ID"
             ;;
         btrfs)
-            echo "$graph_root"btrfs/subvolumes/"$ID"
+            echo "${graph_root}btrfs/subvolumes/$ID"
             ;;
         devicemapper)
-            echo "$graph_root"devicemapper/mnt/"$ID"/rootfs/
+            echo "${graph_root}devicemapper/mnt/$ID/rootfs/"
             ;;
         *)
             die "I don't know how to handle this type of driver: $driver"
     esac
 }
 
-dhtop() {
-    htop -p "$(pids "$1")"
+htop() {
+    command htop -p "$(pids "$1")"
 }
 
-dssh() {
+ssh() {
     local IP="$(get_ip "$1")"
     shift 
-    ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "$IP" "$@"
+    command ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "$IP" "$@"
 }
 
 supported_cgroups() {
@@ -83,7 +84,7 @@ supported_cgroups() {
 cg_exec() {
     local ID="$(get_id "$1")"
     shift
-    cgexec -g "$(supported_cgroups $ID):docker/$ID" -- "$@"
+    cgexec -g "$(supported_cgroups "$ID"):docker/$ID" -- "$@"
 }
 
 ns_enter() {
@@ -96,13 +97,14 @@ inside() {
     local ID="$(get_id "$1")"
     local PID="$(get_root_pid "$1")"
     shift
-    cgexec -g "$(supported_cgroups $ID):docker/$ID" -- \
+    cgexec -g "$(supported_cgroups "$ID"):docker/$ID" -- \
         nsenter --target "$PID" --mount --uts --ipc --net --pid -- "$@"
 }
 
 get_caps() {
     local PID=$(get_root_pid "$1")
-    ruby -e "require 'pp'; require 'cap2'; pp Cap2.process($PID).getcaps[:effective]" | egrep --color=auto 'admin|$'
+    ruby -e "require 'pp'; require 'cap2'; pp Cap2.process($PID).getcaps[:effective]" | \
+        egrep --color=auto 'admin|$'
 }
 
 pgrep() {
@@ -120,12 +122,12 @@ netfilter() {
     } | grep "$IP"
 }
 
-guest_veth_ifindex() {
+veth_ifindex() {
     inside "$1" ethtool -S eth0 | awk '/ifindex/ {print $2}'
 }
 
 host_veth() {
-    local ifindex="$(guest_veth_ifindex "$1")"
+    local ifindex="$(veth_ifindex "$1")"
     ip link | awk -F": " "/^$ifindex/ {print \$2}"
 # or if I wanted to contort myself:
 #     python2 <<EOF 
@@ -143,22 +145,26 @@ _netinfo() {
     local ID="$(get_id "$1")"
     local IP="$(get_ip "$1")"
     local HOST_VETH="$(host_veth "$ID")"
-    echo "ID $ID"
-    echo "IP $IP"
-    echo "HOST_VETH $HOST_VETH"
+    echo "docker container: $ID"
+    echo "container ipv4: $IP"
+    echo "host veth: $HOST_VETH"
     ip link show "$HOST_VETH" | _indent
-    echo "NETFILTER_DETAILS:"
+    echo "host netfilter/iptables for container:"
     netfilter "$ID" | _indent
-    echo "inside ip addr:"
+    echo 'inside `ip addr`:'
     inside "$ID" ip addr | _indent
-    echo "inside ip route:"
+    echo 'inside `ip route`:'
     inside "$ID" ip route | _indent
-    echo "inside arp:"
+    echo 'inside `arp`:'
     inside "$ID" arp | _indent
     echo "inside /etc/hosts:"
     inside "$ID" cat /etc/hosts | _indent
     echo "inside /etc/resolv.conf:"
     inside "$ID" cat /etc/resolv.conf | _indent
+    echo 'inside tcp connections `ss --tcp`:'
+    inside "$ID" ss --tcp | _indent
+    echo 'inside tcp connections `ss --tcp`:'
+    inside "$ID" ss --tcp | _indent
 }
 net () {
     if [[ -t 1 ]]; then 
@@ -173,19 +179,19 @@ pstree() {
     command pstree -usl -H"$PID" "$PID"
 }
 
-ps_guest() {
+ps_inside() {
     inside "$1" ps -efH
 }
 
-ps_host() {
-    ps -H -f -p $(pids "$1")
+ps_outside() {
+    ps -H -f -p "$(pids "$1")"
 }
 
 psx() {
     echo '# PIDs inside container'
-    ps_guest "$1"
+    ps_inside "$1"
     echo '# PIDs outside in host'
-    ps_host "$1"
+    ps_outside "$1"
 }
 
 usage() {
@@ -221,14 +227,14 @@ Usage:
   dockhack pids CID
     print a comma delimited list of all PIDs in the container
 
-  dockhack ps_host CID
+  dockhack ps_outside CID
     ps -H -f -p $(pids "$CID")
 
-  dockhack ps_guest CID
+  dockhack ps_inside CID
     run `ps -efH` inside the container
 
   dockhack psx CID
-    run both ps_host and ps_guest
+    run both ps_outside and ps_inside
 
   dockhack pgrep CID <pgrep args>
     run pgrep inside the container
@@ -236,13 +242,13 @@ Usage:
   dockhack pstree CID
     run `pstree` scoped to the container processes
 
-  dockhack dhtop CID
+  dockhack htop CID
     run htop, on the host, with the PIDs limited to those in the container
 
   dockhack fsroot CID
     print the mount path of the container's filesystem inside /var/lib/docker
 
-  dockhack dssh CID
+  dockhack ssh CID
     ssh into the container, assuming you've got init+sshd running
   
   The following require the `cgroup-bin` package (cgexec, lscgroup,
@@ -291,15 +297,25 @@ EOF
 }
 
 main() {
+    [[ "$UID" != "0" ]] && {
+        echo 
+    }
     case "$@" in 
-        -h|--help)
+        -h|--help|help)
             usage
             ;;
         "")
             usage >/dev/stderr
             exit 2
             ;;
+        shell)
+            bash --init-file <(echo "source $0 noop; alias d=docker;PROMPT_COMMAND=""; PS1='dockhack> ' ")
+            ;;
+        noop)
+            # to enable `source dockhack noop` from the shell command
+            ;;
         *)
+            # execute the sub commands now that the above functions are loaded
             "$@"
             ;;
     esac
