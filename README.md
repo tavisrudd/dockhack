@@ -116,4 +116,7 @@ where
            6a3827868f31b549e2cfcf47e0f28a1ecc631aeec7a661c5a3cfa3966a66ca1d
            compassionate_lovelace
   PROP := anything that would resolve correctly in `docker inspect --format '{{PROP}}'`
+
+
+You can also source this script as a bash library: `source dockhack lib`.
 ```

@@ -376,6 +376,8 @@ where
            compassionate_lovelace
   PROP := anything that would resolve correctly in `docker inspect --format '{{PROP}}'`
 
+You can also source this script as a bash library: `source dockhack lib`.
+
 EOF
 
 
@@ -391,10 +393,10 @@ main() {
             exit 2
             ;;
         shell)
-            bash --init-file <(echo "source $0 noop; alias d=docker;PROMPT_COMMAND=""; PS1='dockhack> ' ")
+            bash --init-file <(echo "source $0 lib; alias d=docker;PROMPT_COMMAND=""; PS1='dockhack> ' ")
             ;;
-        noop)
-            # to enable `source dockhack noop` from the shell command
+        lib)
+            # to enable `source dockhack lib` from the shell command
             ;;
         *)
             # execute the sub commands now that the above functions are loaded
