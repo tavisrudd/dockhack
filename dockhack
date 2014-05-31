@@ -67,6 +67,16 @@ fsroot() {
     esac
 }
 
+cp() {
+    local ID="$(get_id "$1")"
+    local source="$2"
+    local target="$3"
+    local root="$(fsroot "$ID")"
+    target="$(readlink -m "$root/$target")"
+    command cp "$source" "$target"
+}
+
+
 htop() {
     command htop -p "$(pids "$1")"
 }
@@ -319,6 +329,9 @@ Usage:
 
   dockhack fsroot CID
     print the mount path of the container's filesystem inside /var/lib/docker
+
+  dockhack cp CID source-filepath-on-host target-filepath-in-container
+    the inverse of `docker cp` which copies from the container to the host
 
   dockhack ssh CID
     ssh into the container, assuming you've got init+sshd running

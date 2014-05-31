@@ -71,6 +71,9 @@ Note, most of these commands require `root` privileges to work.
   dockhack fsroot CID
     print the mount path of the container's filesystem inside /var/lib/docker
 
+  dockhack cp CID source-filepath-on-host target-filepath-in-container
+    the inverse of `docker cp` which copies from the container to the host
+
   dockhack ssh CID
     ssh into the container, assuming you've got init+sshd running
   
