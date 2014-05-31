@@ -171,8 +171,8 @@ _netinfo() {
     inside "$ID" cat /etc/hosts | _indent
     echo "inside /etc/resolv.conf:"
     inside "$ID" cat /etc/resolv.conf | _indent
-    echo 'inside tcp connections `ss --tcp`:'
-    inside "$ID" ss --tcp | _indent
+    echo 'inside inet servers `ss -ln --tcp --udp`:'
+    inside "$ID" ss -ln --tcp --udp | _indent
     echo 'inside tcp connections `ss --tcp`:'
     inside "$ID" ss --tcp | _indent
 }
