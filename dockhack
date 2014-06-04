@@ -67,13 +67,13 @@ fsroot() {
     esac
 }
 
-cp() {
+_cp() {
     local ID="$(get_id "$1")"
     local source="$2"
     local target="$3"
     local root="$(fsroot "$ID")"
     target="$(readlink -m "$root/$target")"
-    command cp "$source" "$target"
+    cp "$source" "$target"
 }
 
 
@@ -407,5 +407,9 @@ main() {
             "$@"
             ;;
     esac
+        "cp "*)
+            read ID source target < echo "$@"
+            _cp "$args"
+            ;;
 }
 main "$@"
