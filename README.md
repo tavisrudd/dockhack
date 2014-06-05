@@ -76,7 +76,10 @@ Note, most of these commands require `root` privileges to work.
 
   dockhack ssh CID
     ssh into the container, assuming you've got init+sshd running
-  
+
+  dockhack ssh-cp-key CID [pubkey-path]
+    cp your ssh pubkey into /root/.ssh/authorized_keys in the container
+
   The following require the `cgroup-bin` package (cgexec, lscgroup,
   etc.) and `nsenter`
   (http://man7.org/linux/man-pages/man1/nsenter.1.html) from

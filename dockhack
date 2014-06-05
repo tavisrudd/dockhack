@@ -87,6 +87,19 @@ ssh() {
     command ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "$IP" "$@"
 }
 
+ssh-cp-key() {
+    local ID="$(get_id "$1")"
+    local rootssh="$(readlink -m "$(fsroot "$ID")/root/.ssh")"
+    mkdir -p "$rootssh"
+    if [[ -z "$2" ]]; then 
+        cat ~/.ssh/id_*.pub >> "$rootssh/authorized_keys"
+    else
+        [[ -e "$2" ]] || die "pubkey file $2 does not exist"
+        cat "$2" >> "$rootssh/authorized_keys"
+    fi
+}
+
+
 supported_cgroups() {
     lscgroup | awk -F: "/$(get_id "$1")/ {print \$1}" | paste -sd,
 }
@@ -335,7 +348,10 @@ Usage:
 
   dockhack ssh CID
     ssh into the container, assuming you've got init+sshd running
-  
+
+  dockhack ssh-cp-key CID [pubkey-path]
+    cp your ssh pubkey into /root/.ssh/authorized_keys in the container
+
   The following require the `cgroup-bin` package (cgexec, lscgroup,
   etc.) and `nsenter`
   (http://man7.org/linux/man-pages/man1/nsenter.1.html) from
