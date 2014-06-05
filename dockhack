@@ -416,7 +416,7 @@ main() {
             ;;
         *)
             # execute the sub commands now that the above functions are loaded
-            [[ "$UID" != "0" ]] && {
+            [[ -z $DOCKHACK_SKIP_UID_CHECK ]] && [[ "$UID" != "0" ]] && {
                 echo "WARNING: You need to run this as root on the host."  >/dev/stderr
                 echo "WARNING: Most commands require root privileges"  >/dev/stderr
             }
