@@ -1,0 +1,30 @@
+#!/bin/bash
+# A mocked version of docker for dockhack's tests.
+
+readonly TEST_ID=35882a1f647fcd6797654bf27727a7ecb4789fd7b2a856da7fef9b6d737cd6af
+readonly TEST_NAME=foobar
+readonly TEST_IP="10.0.0.2"
+readonly TEST_ROOTPID=2323
+
+case "$@" in
+    "ps -l -q --no-trunc")
+        echo "$TEST_ID"
+        ;;
+    "get_id $TEST_NAME"|"id $TEST_NAME")
+        echo "$TEST_ID"
+        ;;
+    "get_id last"|"get_id l"|"id l")
+        echo "$TEST_ID"
+        ;;
+    "inspect --format {{.NetworkSettings.IPAddress}}"*)
+        echo "$TEST_IP"
+        ;;
+    "inspect --format {{.State.Pid}}"*)
+        echo "$TEST_ROOTPID"
+        ;;
+    *)
+        # no-op
+        ;;
+esac
+
+
