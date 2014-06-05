@@ -10,12 +10,6 @@ case "$@" in
     "ps -l -q --no-trunc")
         echo "$TEST_ID"
         ;;
-    "get_id $TEST_NAME"|"id $TEST_NAME")
-        echo "$TEST_ID"
-        ;;
-    "get_id last"|"get_id l"|"id l")
-        echo "$TEST_ID"
-        ;;
     "inspect --format {{.NetworkSettings.IPAddress}}"*)
         echo "$TEST_IP"
         ;;
