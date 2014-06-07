@@ -9,6 +9,11 @@ die() {
     exit 1
 }
 
+_path() {
+    # a wraper around fs paths so I can rewrite them in tests
+    echo "$1"
+}
+
 last_id() { 
     docker ps -l -q --no-trunc
 }
@@ -45,7 +50,7 @@ get_root_pid(){
 
 pids() {
     local ID="$(get_id "$1")"
-    paste -sd "," < "/sys/fs/cgroup/devices/docker/$ID/tasks"
+    paste -sd "," < "$(_path "/sys/fs/cgroup/devices/docker/$ID/tasks")"
 }
 
 fsroot() {
@@ -73,7 +78,7 @@ _cp() {
     local target="$3"
     local root="$(fsroot "$ID")"
     target="$(readlink -m "$root/$target")"
-    cp "$source" "$target"
+    cp "$source" "$(_path "$target")"
 }
 
 
@@ -90,12 +95,13 @@ ssh() {
 ssh-cp-key() {
     local ID="$(get_id "$1")"
     local rootssh="$(readlink -m "$(fsroot "$ID")/root/.ssh")"
+    local auth_keys="$(_path "$rootssh/authorized_keys")"
     mkdir -p "$rootssh"
     if [[ -z "$2" ]]; then 
-        cat ~/.ssh/id_*.pub >> "$rootssh/authorized_keys"
+        cat ~/.ssh/id_*.pub >> "$auth_keys"
     else
         [[ -e "$2" ]] || die "pubkey file $2 does not exist"
-        cat "$2" >> "$rootssh/authorized_keys"
+        cat "$2" >> "$auth_keys"
     fi
 }
 
