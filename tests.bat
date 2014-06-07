@@ -52,6 +52,15 @@ export -f docker
   done
 }
 
+@test "'get_id $TEST_NAME' == 'id $TEST_NAME'" {
+  local -a commands=("get_id $TEST_NAME" "id $TEST_NAME")
+  for com in "${commands[@]}"; do
+      eval "run ./dockhack $com"
+      [[ "$status" -eq 0 ]]
+      [[ "$output" = "$TEST_ID" ]] || die "bad out"
+  done
+}
+
 @test "dummy test" {
     true
 }

@@ -1,9 +1,9 @@
 #!/bin/bash
 # A mocked version of docker for dockhack's tests.
 
-readonly TEST_ID=35882a1f647fcd6797654bf27727a7ecb4789fd7b2a856da7fef9b6d737cd6af
-readonly TEST_NAME=foobar
-readonly TEST_IP="10.0.0.2"
+readonly TEST_ID=f0e4fa5fd7052fdc5db8561ed6fbb38dd7c7d21e9654b246316048beef1ab7ac
+readonly TEST_NAME=test_container
+readonly TEST_IP="172.17.0.4"
 readonly TEST_ROOTPID=2323
 
 case "$@" in
@@ -15,6 +15,9 @@ case "$@" in
         ;;
     "inspect --format {{.State.Pid}}"*)
         echo "$TEST_ROOTPID"
+        ;;
+    "inspect --format {{.ID}}"*)
+        echo "$TEST_ID"
         ;;
     *)
         # no-op
