@@ -420,6 +420,12 @@ main() {
         lib)
             # to enable `source dockhack lib` from the shell command
             ;;
+        "cp "*)
+            local ID="$2" 
+            local source="$3" 
+            local target="$4"
+            _cp "$ID" "$source" "$target"
+            ;;
         *)
             # execute the sub commands now that the above functions are loaded
             [[ -z $DOCKHACK_SKIP_UID_CHECK ]] && [[ "$UID" != "0" ]] && {
@@ -429,9 +435,5 @@ main() {
             "$@"
             ;;
     esac
-        "cp "*)
-            read ID source target < echo "$@"
-            _cp "$args"
-            ;;
 }
 main "$@"
