@@ -14,6 +14,10 @@ _path() {
     echo "$1"
 }
 
+_is_version1() {
+    docker version | grep '^Client version: 1' >/dev/null
+}
+
 last_id() { 
     docker ps -l -q --no-trunc
 }
@@ -26,8 +30,13 @@ get_id() {
         l|last)
             last_id
             ;;
-        *)
-            get_prop "$1" ".ID" || die "invalid container id: $1"
+        *) 
+            if _is_version1; then
+                # fucking capitals
+                get_prop "$1" ".Id" || die "invalid container id: $1"
+            else
+                get_prop "$1" ".ID" || die "invalid container id: $1"
+            fi
             ;;
     esac
 }
