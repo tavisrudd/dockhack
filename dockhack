@@ -3,10 +3,15 @@
 ## Copyright 2014: Tavis Rudd <tavis@damnsimple.com>
 ## License: MIT
 
-
+trap "exit 1" TERM
 die() {
     echo "$@" >/dev/stderr
-    exit 1
+    if (( $BASH_SUBSHELL >= 1 )); then 
+        kill -s TERM "$$"
+        return 1
+    else
+        exit 1
+    fi
 }
 
 _path() {
@@ -31,12 +36,15 @@ get_id() {
             last_id
             ;;
         *) 
+            local prop
             if _is_version1; then
-                # fucking capitals
-                get_prop "$1" ".Id" || die "invalid container id: $1"
+                prop=".Id"
             else
-                get_prop "$1" ".ID" || die "invalid container id: $1"
+                prop=".ID"
             fi
+            ret="$(docker inspect --format "{{$prop}}" "$1")"
+            [[ "$ret" == "<no value>" ]] && die "invalid container id: $1"
+            echo -n "$ret"
             ;;
     esac
 }
@@ -46,15 +54,18 @@ id() {
 }
 
 get_prop() {
+    [[ "$1" == "<no value>" ]] && return 1
     docker inspect --format "{{$2}}" "$1"
 }
 
 get_ip(){
-    get_prop "$(get_id "$1")" ".NetworkSettings.IPAddress"
+    local ID="$(get_id "$1")"
+    get_prop "$ID" ".NetworkSettings.IPAddress"
 }
 
 get_root_pid(){
-    get_prop "$(get_id "$1")" ".State.Pid"
+    local ID="$(get_id "$1")"
+    get_prop "$ID" ".State.Pid"
 }
 
 pids() {
@@ -116,7 +127,8 @@ ssh-cp-key() {
 
 
 supported_cgroups() {
-    lscgroup | awk -F: "/$(get_id "$1")/ {print \$1}" | paste -sd,
+    local ID="$(get_id "$1")"
+    lscgroup | awk -F: "/$ID/ {print \$1}" | paste -sd,
 }
 
 cg_exec() {
@@ -126,6 +138,7 @@ cg_exec() {
 }
 
 ns_enter() {
+    local ID="$(get_id "$1")"
     local PID="$(get_root_pid "$1")"
     shift
     nsenter --target "$PID" --mount --uts --ipc --net --pid -- "$@"
