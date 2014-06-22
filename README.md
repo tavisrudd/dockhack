@@ -121,5 +121,5 @@ where
   PROP := anything that would resolve correctly in `docker inspect --format '{{PROP}}'`
 
 
-You can also source this script as a bash library: `source dockhack lib`.
+You can also source this script as a bash library: `source dockhack`.
 ```
