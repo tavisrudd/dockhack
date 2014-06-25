@@ -7,6 +7,7 @@ trap "exit 1" TERM
 die() {
     echo "$@" >/dev/stderr
     if (( $BASH_SUBSHELL >= 1 )); then 
+        # a hack for clean termination from sub-sub-shells. This is the worst wart of bash
         kill -s TERM "$$"
         return 1
     else
