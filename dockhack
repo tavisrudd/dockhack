@@ -303,9 +303,9 @@ _install_cgroup_bin() {
 }
 install_deps() {    
     { 
-        which lscgroup &>/dev/null || _install_cgroup_bin
-    } && {
         which nsenter &> /dev/null || _install_nsenter
+    } && {
+        which lscgroup &>/dev/null || _install_cgroup_bin
     } || 
     echo "dockhack requires recent versions of the cgroup-bin (aka libcgroup) and util-linux packages."
 }
